@@ -2,5 +2,12 @@
   "name": "@vue/shared",
   "version": "1.0.0",
   "main": "index.js",
-  "license": "MIT"
+  "license": "MIT",
+  "module": "dist/shared.esm-bundler.js",
+  "buildOptions": {
+    "formats": [
+      "esm-bundler",
+      "cjs"
+    ]
+  }
 }

@@ -131,6 +131,99 @@ shared/package.json
 
 ## 实现构建流程
 
+### 开发环境esbuild打包
+
+创建开发时执行的脚本， 参数是要打包的模块
+
+执行 script/dev.js 脚本， 打包那个模块 -f 以那种方式进行打包。
+
+```json
+ "scripts": {
+    "dev": "node scripts/dev.js reactivity -f global"
+  },
+```
+
+一般类库的策略就是： 开发环境下使用 `esbuild`、生产环境下使用`rollup`
+
+```js
+nodejs 
+console.log(process.argv)   
+```
+
+
+
+![image-20220405150420888](https://picture-stores.oss-cn-beijing.aliyuncs.com/img/image-20220405150420888.png)
+
+使用 `minimist` 
+
+minimist轻量级的命令行参数解析引擎。
+
+example/parse.js
+
+```js
+var argv = require('minimist')(process.argv.slice(2));
+console.log(argv);
+```
+
+```bash
+$ node example/parse.js -a beep -b boop
+{ _: [], a: 'beep', b: 'boop' }
+```
+
+用这个包，可以解析出执行脚本的时候，命令行里面的参数。
+
+scripts/dev.js
+
+```js
+const { build } = require('esbuild')
+const { resolve } = require('path')
+
+// 解析命令行参数
+const args = require('minimist')(process.argv.slice(2))
+
+// 获取打包那个模块
+const target = args._[0] || 'reactivity'
+// 获取打包格式
+const format = args.f || 'global'
+
+const pkg = resolve(__dirname, `../packages/${target}/package.json`)
+
+const outfile = resolve(__dirname, `../packages/${target}/dist/${target}.${format}.js`)
+
+// iife (function(){})()  立即执行函数
+// cjs node中的模块 module.exports
+// esm 浏览器中的 esModule import
+
+const outputFormat = format.startsWith('global') ? 'iife' : format === 'cjs' ? 'cjs' : 'esm'
+
+build({
+  entryPoints: [resolve(__dirname, `../packages/${target}/src/index.ts`)], // 入口文件
+  outfile, // 打包输出文件的位置
+  bundle: true, // 将任何导入的依赖内联到文件本身中去，这个过程是递归的，因此依赖关系也会被内联
+  sourcemap: true,
+  format: outputFormat, // 输出的格式
+  globalName: pkg.buildOptions?.name, //全局挂载的时候的名字  window.xxx
+  platform: format === 'cjs' ? 'node' : 'browser',
+  watch: {
+    // 监听文件变化
+    onRebuild(error) {
+      if (!error) {
+        console.log(`rebuilt`)
+      }
+    }
+  }
+}).then(() => {
+  console.log('watching...')
+})
+
+```
+
+运行 pnpm run dev ,可以看见打包文件已经生成好了。
+
+![image-20220405160155360](https://picture-stores.oss-cn-beijing.aliyuncs.com/img/image-20220405160155360.png)
+
+### 生产环境rollup打包
+
 
 
 
