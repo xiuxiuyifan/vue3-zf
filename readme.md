@@ -1,3 +1,7 @@
+## 仓库地址
+
+[github](https://github.com/xiuxiuyifan/vue3-zf)  欢迎 start 和 一起学习 ^_^。
+
 ## 环境搭建
 
 安装 pnpm
@@ -1165,6 +1169,81 @@ watch(value, async (newValue, oldValue, onCleanup) => {
 ```
 
 ### ref的实现原理
+
+ref 的使用  在获取真实值的时候都需要加 `.value`因为 `proxy`无法直接代理原始值。
+
++ 原始类型使用ref value 返回的是一个原始值
+
+```js
+let { effect, reactive, computed, watch, ref, createApp } = Vue
+let App = {
+    setup() {
+        let count = ref(10)
+        console.log(count)
+        return {
+            count
+        }
+    }
+}
+let app = createApp(App)
+app.mount('#app')
+```
+
+![image-20220410205633008](https://picture-stores.oss-cn-beijing.aliyuncs.com/img/image-20220410205633008.png)
+
++ 引用类型使用ref, value 返回的是一个 proxy 对象
+
+```js
+let arr = ref([])
+console.log(count)
+```
+
+![image-20220410205544675](https://picture-stores.oss-cn-beijing.aliyuncs.com/img/image-20220410205544675.png)
+
++ref.ts
+
+```js
+import { isObject } from '@vue/shared'
+import { trackEffects, triggerEffects } from './effect'
+import { reactive } from './reactive'
+
+function toReactive(value) {
+  // 如果是对要转成 proxy 否则返回原始值
+  return isObject(value) ? reactive(value) : value
+}
+
+class RefImpl {
+  public dep = new Set()
+  public _value
+  public _v_isRef = true
+
+  constructor(public rowValue) {
+    this._value = toReactive(rowValue)
+  }
+  get value() {
+    // 获取值的时候进行依赖收集
+    // 把当前用到这个 ref 的 effect 副作用函数收集起来。
+    trackEffects(this.dep)
+    return this._value
+  }
+
+  set value(newValue) {
+    // 新值和老值进行对比，如果不相等，则重新计算新值
+    if (newValue !== this.rowValue) {
+      this._value = toReactive(newValue)
+      this.rowValue = newValue
+      // 依次执行 effect
+      triggerEffects(this.dep)
+      // 设置完之后触发更新
+    }
+  }
+}
+
+export function ref(value) {
+  return new RefImpl(value)
+}
+
+```
 
 
 
