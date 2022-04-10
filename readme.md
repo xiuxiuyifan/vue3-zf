@@ -1090,7 +1090,79 @@ export function watch(source, cb) {
 
 ```
 
++ 应用，解除上一次的watch  onCleanup
 
+应用场景：
+
+当用户在输入框输入的时候，我们要根据用户的输入，调用 ajax 请求获取结果。
+
+实现代码：
+
+输入框的内容一发生变化就访问接口，然后更改 state 然后渲染页面，
+
+这样做有问题吗？
+
+```txt
+假设请求
+第一次   q = '你'     响应时长   2s
+第二次   q = '你好'   响应时长   1s
+```
+
+那么渲染的结果就是，第一次的请求结果会覆盖掉，第二次请求的结果。不是我们想要的结果。
+
+我们用以下代码进行模拟上面的场景
+
+```js
+const App = {
+    setup() {
+        const state = reactive({
+            count: 10
+        })
+        const value = ref()
+
+        effect(() => {})
+
+        function getData(time) {
+            return new Promise((resolve, reject) => {
+                setTimeout(() => {
+                    resolve(time)
+                }, time * 1000)
+            })
+        }
+        let n = 2
+        watch(value, async () => {
+            let data = await getData(n--)   // 第一次请求 2s 返回
+            								// 第二次请求 1s 返回
+            console.log(data)
+            state.count = data              // 最后渲染在页面上的值就不是第二次请求返回的值，而是第一次的值
+        })
+
+        return {
+            value,
+            state
+        }
+    }
+}
+
+const app = createApp(App).mount('#app')
+```
+
+我们可以添加一个变量，和一个 onCleanup 函数，在每次执行 watch 的函数之前手动控制是否要执行某些操作
+
+```js
+watch(value, async (newValue, oldValue, onCleanup) => {
+    let clean = false
+    // 调用这个函数可以清理上一次的 watch
+    onCleanup(() => {
+        clean = true
+    })
+    let data = await getData(n--)
+    // 如果不清理，才可以渲染页面。
+    if (!clean) {
+        state.count = data
+    }
+})
+```
 
 ### ref的实现原理
 

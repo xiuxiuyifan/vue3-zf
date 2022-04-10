@@ -35,16 +35,23 @@ export function watch(source, cb) {
   } else if (isFunction(source)) {
     getter = source
   }
+  let cleanup
+  const onCleanup = (fn) => {
+    cleanup = fn // 保存用户的函数
+  }
   let oldValue
 
   // 当 watch 的值发生变化的时候就会触发 scheduler 调度函数执行，这个时候再执行用户传递的 callback 函数
   // 以及把新老值传递给 callback 函数
   const job = () => {
+    if (cleanup) cleanup() // 下一次watch 执行的时候就会触发上一次 watch 的清理
     const newValue = effect.run()
-    cb(newValue, oldValue)
+    cb(newValue, oldValue, onCleanup)
     oldValue = newValue
   }
   const effect = new ReactiveEffect(getter, job)
 
   oldValue = effect.run()
 }
+
+// watch = effect 内部会保存老值和新值，并传递给 callback 函数
