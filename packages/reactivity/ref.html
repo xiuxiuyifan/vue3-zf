@@ -9,25 +9,20 @@
   <body>
     <div id="app">
       <div>count：{{count}}</div>
-      <div>name：{{name}}</div>
-      <div>address：{{address.area}}</div>
     </div>
     <!-- <script src="./dist/reactivity.global.js"></script> -->
     <script src="/node_modules/vue/dist/vue.global.js"></script>
     <script>
       // let { effect, reactive, watch } = VueReactivity
-      let { effect, reactive, computed, watch, ref, createApp, toRefs } = Vue
+      let { effect, reactive, computed, watch, ref, createApp } = Vue
       let App = {
         setup() {
-          let obj = reactive({
-            count: 100,
-            name: '小明',
-            address: {
-              area: '北京'
-            }
-          })
+          let count = ref(10)
+          let arr = ref([])
+          setTimeout(() => {})
+          console.log(count)
           return {
-            ...toRefs(obj)
+            count
           }
         }
       }

@@ -1,4 +1,4 @@
-import { isObject } from '@vue/shared'
+import { isArray, isObject } from '@vue/shared'
 import { trackEffects, triggerEffects } from './effect'
 import { reactive } from './reactive'
 
@@ -36,4 +36,32 @@ class RefImpl {
 
 export function ref(value) {
   return new RefImpl(value)
+}
+
+class ObjectRefImpl {
+  constructor(public object, public key) {}
+
+  get value() {
+    return this.object[this.key]
+  }
+  set value(newValue) {
+    this.object[this.key] = newValue
+  }
+}
+
+export function toRef(object, key) {
+  return new ObjectRefImpl(object, key)
+}
+
+/**
+ * 只是给每一个对象的属性都包装了一个 .value 的属性
+ * @param object 原理的代理对象
+ * @returns
+ */
+export function toRefs(object) {
+  const result = isArray(object) ? new Array(object.length) : {}
+  for (let key in object) {
+    result[key] = toRef(object, key)
+  }
+  return result
 }

@@ -1245,6 +1245,65 @@ export function ref(value) {
 
 ```
 
+使用 torefs
+
+```js
+<div id="app">
+    <div>count：{{count}}</div>
+	<div>name：{{name}}</div>
+    <div>address：{{address.area}}</div>   // 里面不会做深层的添加 .value
+</div>
+let App = {
+    setup() {
+        let obj = reactive({
+            count: 100,
+            name: '小明',
+            address: {
+              area: '北京'
+            }
+        })
+        return {
+            ...toRefs(obj)
+        }
+    }
+}
+```
+
+![image-20220410222954538](https://picture-stores.oss-cn-beijing.aliyuncs.com/img/image-20220410222954538.png)
+
+实现 toRefs
+
+```js
+class ObjectRefImpl {
+  constructor(public object, public key) {}
+
+  get value() {
+    return this.object[this.key]
+  }
+  set value(newValue) {
+    this.object[this.key] = newValue
+  }
+}
+
+export function toRef(object, key) {
+  return new ObjectRefImpl(object, key)
+}
+
+/**
+ * 只是给每一个对象的属性都包装了一个 .value 的属性
+ * @param object 原理的代理对象
+ * @returns
+ */
+export function toRefs(object) {
+  const result = isArray(object) ? new Array(object.length) : {}
+  for (let key in object) {
+    result[key] = toRef(object, key)
+  }
+  return result
+}
+
+```
+
 
 
 ### 源码调试
