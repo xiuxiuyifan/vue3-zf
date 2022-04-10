@@ -983,6 +983,113 @@ export const computed = (getterOrOptions) => {
 
 ### watch的实现原理
 
+watch 的基本使用
+
+1. 接受一个对象
+
+```js
+let { effect, reactive, computed, watch } = Vue
+
+const state = reactive({
+    name: '张三',
+    age: 10
+})
+
+watch(state, (newValue, oldValue) => {
+    console.log(newValue, oldValue)
+})
+
+setTimeout(() => {
+    state.age = 99
+}, 1000)
+```
+
+可以看到监测一个对象 新值和老值是一样的，因为他们的引用地址不会发生变化。
+
+![image-20220410114404103](https://picture-stores.oss-cn-beijing.aliyuncs.com/img/image-20220410114404103.png)
+
+2. 接受一个函数
+
+```js
+let { effect, reactive, computed, watch } = Vue
+
+const state = reactive({
+    name: '张三',
+    age: 10
+})
+
+watch(
+    () => state.age,
+    (newValue, oldValue) => {
+        console.log(newValue, oldValue)
+    }
+)
+
+setTimeout(() => {
+    state.age = 99
+}, 1000)
+```
+
+watch 一个基本数据类型的时候是可以拿到新值和老值的。
+
+![image-20220410114643141](https://picture-stores.oss-cn-beijing.aliyuncs.com/img/image-20220410114643141.png)
+
++watch.ts
+
+```js
+import { isFunction, isObject } from '@vue/shared'
+import { ReactiveEffect } from './effect'
+import { isReactive } from './reactive'
+
+/**
+ *
+ * @param value
+ * @param set   考虑循环引用的问题
+ * @returns
+ */
+function traversal(value, set = new Set()) {
+  if (~isObject(value)) {
+    return value
+  }
+  if (set.has(value)) {
+    return value
+  }
+  set.add(value)
+  for (let key in value) {
+    traversal(value[key], set)
+  }
+  return value
+}
+
+/**
+ *
+ * @param source用户传递的对象
+ * @param cb
+ */
+export function watch(source, cb) {
+  let getter
+  if (isReactive(source)) {
+    // 进行一个递归访问
+    getter = () => traversal(source)
+  } else if (isFunction(source)) {
+    getter = source
+  }
+  let oldValue
+
+  // 当 watch 的值发生变化的时候就会触发 scheduler 调度函数执行，这个时候再执行用户传递的 callback 函数
+  // 以及把新老值传递给 callback 函数
+  const job = () => {
+    const newValue = effect.run()
+    cb(newValue, oldValue)
+    oldValue = newValue
+  }
+  const effect = new ReactiveEffect(getter, job)
+
+  oldValue = effect.run()
+}
+
+```
+
 
 
 ### ref的实现原理

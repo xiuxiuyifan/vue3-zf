@@ -8,28 +8,26 @@
   </head>
   <body>
     <div id="app"></div>
-    <!-- <script src="./dist/reactivity.global.js"></script> -->
-    <script src="/node_modules/vue/dist/vue.global.js"></script>
+    <script src="./dist/reactivity.global.js"></script>
+    <!-- <script src="/node_modules/vue/dist/vue.global.js"></script> -->
     <script>
-      // let { effect, reactive } = VueReactivity
-      let { effect, reactive, computed } = Vue
+      let { effect, reactive, watch } = VueReactivity
+      // let { effect, reactive, computed, watch } = Vue
 
       const state = reactive({
-        firstName: '张',
-        lastName: '三'
-      })
-      const fullName = computed({
-        get() {
-          return state.firstName + state.lastName
-        }
+        name: '张三',
+        age: 10
       })
 
-      effect(() => {
-        document.body.innerHTML = fullName.value
-      })
+      watch(
+        () => state.age,
+        (newValue, oldValue) => {
+          console.log(newValue, oldValue)
+        }
+      )
 
       setTimeout(() => {
-        state.firstName = '小' // 依赖的属性变化之后，会重新计算  fullName的值
+        state.age = 99
       }, 1000)
     </script>
   </body>

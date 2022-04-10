@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <div id="app"></div>
+    <!-- <script src="./dist/reactivity.global.js"></script> -->
+    <script src="/node_modules/vue/dist/vue.global.js"></script>
+    <script>
+      // let { effect, reactive } = VueReactivity
+      let { effect, reactive, computed } = Vue
+
+      const state = reactive({
+        firstName: '张',
+        lastName: '三'
+      })
+      const fullName = computed({
+        get() {
+          return state.firstName + state.lastName
+        }
+      })
+
+      effect(() => {
+        document.body.innerHTML = fullName.value
+      })
+
+      setTimeout(() => {
+        state.firstName = '小' // 依赖的属性变化之后，会重新计算  fullName的值
+      }, 1000)
+    </script>
+  </body>
+</html>

@@ -3,6 +3,15 @@ import { mutableHandler, ReactiveFlags } from './baseHandler'
 
 let reactiveMap = new WeakMap()
 
+/**
+ *
+ * @param value 判断某个对象是不是响应式的
+ * @returns
+ */
+export function isReactive(value) {
+  return !!(value && value[ReactiveFlags.IS_REACTIVE])
+}
+
 export function reactive(obj) {
   // 如果不是对象直接 return
   if (!isObject) {
