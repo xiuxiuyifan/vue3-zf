@@ -9,7 +9,7 @@ function cleanupEffect(effect) {
   effect.deps.length = 0
 }
 
-class ReactiveEffect {
+export class ReactiveEffect {
   // 表示当前 副作用函数是否激活
   active = true
   // 记录着 effect 被那些属性所使用？
@@ -74,14 +74,20 @@ export function track(target, type, key) {
   if (!dep) {
     depsMap.set(key, (dep = new Set())) // obj: {key: []}
   }
-  // 检测一下 set 里面有没有当前的这个 effect
-  // 没有的时候可以添加
-  let shouldTrack = !dep.has(activeEffect)
-  if (shouldTrack) {
-    // 后面如果一个对象的属性被依赖多次， 就一直往当前的 dep 里面添加 依赖信息就可以了。
-    dep.add(activeEffect)
-    // effect 记住它所有的依赖，在清理的时候会用到的
-    activeEffect.deps.push(dep)
+  trackEffects(dep)
+}
+
+export function trackEffects(dep) {
+  if (activeEffect) {
+    // 检测一下 set 里面有没有当前的这个 effect
+    // 没有的时候可以添加
+    let shouldTrack = !dep.has(activeEffect)
+    if (shouldTrack) {
+      // 后面如果一个对象的属性被依赖多次， 就一直往当前的 dep 里面添加 依赖信息就可以了。
+      dep.add(activeEffect)
+      // effect 记住它所有的依赖，在清理的时候会用到的
+      activeEffect.deps.push(dep)
+    }
   }
 }
 
@@ -101,18 +107,22 @@ export function trigger(target, type, key, value, oldValue) {
   if (!depsMap) return // 触发的值没有在 模板中使用
   let effects = depsMap.get(key) // 找到 key 对应的 effect 了
   if (effects) {
-    // 在执行之前先拷贝一份，来执行，不要关联引用
-    effects = new Set(effects)
-    effects.forEach((effect) => {
-      // 在调用 effect 的时候，如果右要执行自己，则就不需要调用
-      if (effect !== activeEffect) {
-        if (effect.scheduler) {
-          effect.scheduler() // 如果用户传递了 调度函数，那么久调用调度函数
-        } else {
-          // 否则就执行 effect 副作用函数
-          effect.run()
-        }
-      }
-    })
+    triggerEffects(effects)
   }
+}
+
+export function triggerEffects(effects) {
+  // 在执行之前先拷贝一份，来执行，不要关联引用
+  effects = new Set(effects)
+  effects.forEach((effect) => {
+    // 在调用 effect 的时候，如果右要执行自己，则就不需要调用
+    if (effect !== activeEffect) {
+      if (effect.scheduler) {
+        effect.scheduler() // 如果用户传递了 调度函数，那么久调用调度函数
+      } else {
+        // 否则就执行 effect 副作用函数
+        effect.run()
+      }
+    }
+  })
 }
