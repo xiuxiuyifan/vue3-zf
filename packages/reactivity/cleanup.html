@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <div id="app"></div>
+    <!-- <script src="./dist/reactivity.global.js"></script> -->
+    <script src="/node_modules/vue/dist/vue.global.js"></script>
+    <script>
+      let { effect, reactive } = Vue
+      const state = reactive({
+        flag: true,
+        name: '张三',
+        age: 100
+      })
+
+      effect(() => {
+        console.log('render')
+        document.body.innerHTML = state.flag ? state.name : state.age
+      })
+
+      // 所以就需要每次，在执行 effect 的时候把不需要的 effect 清理掉， 重新收集依赖
+      setTimeout(() => {
+        state.flag = false // state 修改为 false 之后  dom 就不依赖 name 属性了
+        setTimeout(() => {
+          console.log('修改 name 原则上不执行 render 函数')
+          state.name = '李四'
+        }, 1000)
+      }, 1000)
+
+      // 写一个 使用 set 要注意的地方
+    </script>
+  </body>
+</html>

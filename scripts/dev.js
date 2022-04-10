@@ -9,7 +9,8 @@ const target = args._[0] || 'reactivity'
 // 获取打包格式
 const format = args.f || 'global'
 
-const pkg = resolve(__dirname, `../packages/${target}/package.json`)
+// 取出当前打包的 package.json文件
+const pkg = require(resolve(__dirname, `../packages/${target}/package.json`))
 
 const outfile = resolve(__dirname, `../packages/${target}/dist/${target}.${format}.js`)
 
@@ -18,7 +19,7 @@ const outfile = resolve(__dirname, `../packages/${target}/dist/${target}.${forma
 // esm 浏览器中的 esModule import
 
 const outputFormat = format.startsWith('global') ? 'iife' : format === 'cjs' ? 'cjs' : 'esm'
-
+console.log(pkg.buildOptions.name)
 build({
   entryPoints: [resolve(__dirname, `../packages/${target}/src/index.ts`)], // 入口文件
   outfile, // 打包输出文件的位置
