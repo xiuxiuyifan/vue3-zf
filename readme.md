@@ -1304,6 +1304,43 @@ export function toRefs(object) {
 
 ```
 
+使用 proxyRefs 功能就是让 ref 不用再手写 `.value`  接受一个对象，当当访问某个属性的时候返回这个属性值的`.value`
+
+```js
+let name = ref('小明')
+let age = ref(10)
+let person = proxyRefs({ name, age })
+
+effect(() => {
+    with (person) {
+        app.innerHTML = name + age
+    }
+})
+```
+
+实现它
+
+```js
+export function proxyRefs(object) {
+  return new Proxy(object, {
+    get(target, key, receive) {
+      let r = Reflect.get(target, key, receive)
+      return r._v_isRef ? r.value : r
+    },
+    set(target, key, value, receive) {
+      let oldValue = target[key]
+      // 如果是 ref 就改写原来值的 .value 属性
+      if (oldValue._v_isRef) {
+        oldValue.value = value
+        return true
+      } else {
+        Reflect.set(target, key, value, receive)
+      }
+    }
+  })
+}
+```
+
 
 
 ### 源码调试

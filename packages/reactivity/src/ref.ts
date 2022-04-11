@@ -65,3 +65,22 @@ export function toRefs(object) {
   }
   return result
 }
+
+export function proxyRefs(object) {
+  return new Proxy(object, {
+    get(target, key, receive) {
+      let r = Reflect.get(target, key, receive)
+      return r._v_isRef ? r.value : r
+    },
+    set(target, key, value, receive) {
+      let oldValue = target[key]
+      // 如果是 ref 就改写原来值的 .value 属性
+      if (oldValue._v_isRef) {
+        oldValue.value = value
+        return true
+      } else {
+        Reflect.set(target, key, value, receive)
+      }
+    }
+  })
+}
