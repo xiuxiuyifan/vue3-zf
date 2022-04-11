@@ -1355,7 +1355,39 @@ export function proxyRefs(object) {
 
 ## 渲染原理
 
+vue 中为了解耦，将逻辑分成了两个模块
 
++ 运行时 核心，不依赖于平台的（browser test 小程序 app canvas）靠的是虚拟DOM实现的
++ 针对于不同平台的运行时 vue 就是针对浏览器的运行时
+
+渲染器的作用： 大概就是可以提供 虚拟DOM 渲染在不同的平台上的一个入口。
+
+```js
+<div id="app"></div>
+<script src="../../../node_modules/vue/dist/vue.global.js"></script>
+<script>
+    // 渲染器渲染的是虚拟 DOM，在内部，使用用户传递的方法，把虚拟DOM转换成真正要渲染的节点。在不同的平台上运行
+
+    let { createRenderer, h } = Vue
+
+let renderer = createRenderer({
+    // 创建元素
+    createElement(element) {
+        return document.createElement(element)
+    },
+    // 设置元素的文本
+    setElementText(el, text) {
+        el.innerHTML = text
+    },
+    // 插入节点
+    insert(el, container) {
+        container.appendChild(el)
+    }
+})
+renderer.render(h('h1', 'hello'), app)
+```
+
+![image-20220411204640376](C:\Users\z\AppData\Roaming\Typora\typora-user-images\image-20220411204640376.png)
 
 ### runtime-dom 
 
