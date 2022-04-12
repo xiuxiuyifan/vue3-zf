@@ -1,5 +1,6 @@
 import { ShapeFlags } from '@vue/shared'
 
+import { Text } from './'
 export function createRenderer(renderOptions) {
   let {
     insert: hostInsert,
@@ -51,8 +52,14 @@ export function createRenderer(renderOptions) {
     hostInsert(el, container)
   }
 
+  const processText = (n1, n2, container) => {
+    if (n1 === null) {
+      // 创建出n2对应的真实dom，并且把真实dom挂载到这个虚拟节点上，并且把真实dom插入到容器中
+      hostInsert((n2.el = hostCreateText(n2.children)), container)
+    }
+  }
   /**
-   *
+   * 核心方法
    * @param n1 老的虚拟节点
    * @param n2 新的虚拟节点
    * @param container 容器
@@ -62,10 +69,21 @@ export function createRenderer(renderOptions) {
     if (n1 === n2) {
       return
     }
+    const { type, shapeFlag } = n2
     // 初次渲染，不需要更新
     if (n1 === null) {
-      // 后序还有组建的初次渲染，目前是元素的初始化渲染
-      mountElement(n2, container)
+      switch (type) {
+        case Text:
+          debugger
+          processText(n1, n2, container)
+          break
+        default:
+          // 当前节点是元素
+          if (shapeFlag & ShapeFlags.ELEMENT) {
+            // 后序还有组建的初次渲染，目前是元素的初始化渲染
+            mountElement(n2, container)
+          }
+      }
     } else {
       // 更新流程
     }

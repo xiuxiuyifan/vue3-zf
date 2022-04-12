@@ -1915,7 +1915,57 @@ let { createRenderer, h, render } = VueRuntimeDOM
 
 ### 解决遗留问题
 
+当我们这样用h函数在 render 函数里面创建`vnode`时。
 
+```js
+render(h('h1', null, [h('span', null, 'hello'), '423432']), app)
+```
+
+可以看到文本也被当做了元素节点，所以在创建节点的时候从 vnode 里面取type等属性的时候就会有问题，我们这边就需要特殊处理一下了。
+
+![image-20220413070717320](https://picture-stores.oss-cn-beijing.aliyuncs.com/img/image-20220413070717320.png)
+
+所以我们现在就需要写一个专门值渲染文本的功能。
+
+我们定义一个`Symbol`的text类型的type,在 `patch`的时候通过判断type的类型，就可以区分开要渲染的是元素节点，还是文本节点。
+
+这个时候创建出来的vnode节点如下
+
+![image-20220413073123848](https://picture-stores.oss-cn-beijing.aliyuncs.com/img/image-20220413073123848.png)
+
+```js
+render(h('h1', null, [h('span', null, 'hello'), h(Text, '66666')]), app)
+
+export const Text = Symbol(`Text`)
+
+function patch() {
+    ...
+    if (n1 === null) {
+      switch (type) {
+        case Text:
++          processText(n1, n2, container)
+          break
+        default:
+          // 当前节点是元素
+          if (shapeFlag & ShapeFlags.ELEMENT) {
+            // 后序还有组建的初次渲染，目前是元素的初始化渲染
+            mountElement(n2, container)
+          }
+      }
+    }
+}
+
+const processText = (n1, n2, container) => {
+    if (n1 === null) {
+        // 创建出n2对应的真实dom，并且把真实dom挂载到这个虚拟节点上，并且把真实dom插入到容器中
+        hostInsert((n2.el = hostCreateText(n2.children)), container)
+    }
+}
+```
+
+达到的效果就是这样。只插入一个文本节点到容器当中去。
+
+![image-20220413073549979](https://picture-stores.oss-cn-beijing.aliyuncs.com/img/image-20220413073549979.png)
 
 ## Vue3 Diff 算法
 

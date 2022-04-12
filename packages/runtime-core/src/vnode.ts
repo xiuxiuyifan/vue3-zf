@@ -1,5 +1,7 @@
 import { isArray, isString, ShapeFlags } from '@vue/shared'
 
+export const Text = Symbol(`Text`)
+
 export function createVnode(type, props, children = null) {
   let shapeFlag = isString(type) ? ShapeFlags.ELEMENT : 0
 
