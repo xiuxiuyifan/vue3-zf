@@ -1,6 +1,7 @@
-import { ShapeFlags } from '@vue/shared'
+import { isString, ShapeFlags } from '@vue/shared'
 
-import { Text } from './'
+import { Text, createVnode } from './'
+
 export function createRenderer(renderOptions) {
   let {
     insert: hostInsert,
@@ -14,6 +15,14 @@ export function createRenderer(renderOptions) {
     patchProp: hostPatchProp
   } = renderOptions
 
+  const normalize = (children, i) => {
+    // 检测如果是字符串的话，就把字符串转换成文本节点
+    if (isString(children[i])) {
+      let vnode = createVnode(Text, null, children[i])
+      children[i] = vnode
+    }
+    return children[i]
+  }
   /**
    * 挂载子节点
    * @param children
@@ -21,7 +30,8 @@ export function createRenderer(renderOptions) {
    */
   const mountChildren = (children, container) => {
     for (let i = 0; i < children.length; i++) {
-      patch(null, children[i], container)
+      const child = normalize(children, i)
+      patch(null, child, container)
     }
   }
   /**

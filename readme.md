@@ -1967,6 +1967,28 @@ const processText = (n1, n2, container) => {
 
 ![image-20220413073549979](https://picture-stores.oss-cn-beijing.aliyuncs.com/img/image-20220413073549979.png)
 
+在包装一层，如果用户在编写 render 函数的时候只有字符串的时候，是不是可以不用写 h 函数呢？直接写一个字符串可以吗？
+
+```js
+const mountChildren = (children, container) => {
+    for (let i = 0; i < children.length; i++) {
++        const child = normalize(children, i)
+        patch(null, child, container)
+    }
+}
+
+const normalize = (children, i) => {
+    // 检测如果是字符串的话，就把字符串转换成文本节点
+    if (isString(children[i])) {
+        let vnode = createVnode(Text, null, children[i])
+        children[i] = vnode
+    }
+    return children[i]
+}
+```
+
+
+
 ## Vue3 Diff 算法
 
 
