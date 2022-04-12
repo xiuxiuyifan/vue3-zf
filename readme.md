@@ -1702,6 +1702,8 @@ export const enum ShapeFlags { // vue3提供的形状标识
 
 然后就可以通过这个返回的结果判断是否符合条件
 
+vnode.ts
+
 ```js
 import { isArray, isString, ShapeFlags } from '@vue/shared'
 
@@ -1733,15 +1735,183 @@ export function createVnode(type, props, children) {
 
 ```
 
+h.ts
 
+```js
+// render(h('h1', 'hello'), app)
 
+import { isArray, isObject } from '@vue/shared'
+import { createVnode, isVnode } from './vnode'
 
+// render(h('h1', null, h('span', null, 'hihi'), h('span', null, '999')), app)
 
+// render(h('h1', h('span', null, 'hihi')), app)
 
+// render(h('h1', null, 'hello', 'world'), app)
+
+// render(
+//   h('h1', { style: { color: 'red' } }, [h('span', null, 'hello'), h('span', null, 'world')]),
+//   app
+// )
+/**
+ * 先来看一下 h 函数的几种使用方法
+ * @param type  标签
+ * @param propsChildren   放属性
+ * @param children  放儿子
+ */
+export function h(type, propsChildren, children) {
+  let l = arguments.length
+  // h('div',{style:{"color"：“red”}})
+  // h('div',h('span'))
+  // h('div',[h('span'),h('span')])
+  // h('div','hello')
+  if (l === 2) {
+    // 为什么要将儿子包装成数组， 因为元素可以循环创建。 文本不需要包装了
+    if (isObject(propsChildren) && !isArray(propsChildren)) {
+      // h('div',h('span'))
+      if (isVnode(propsChildren)) {
+        return createVnode(type, null, [propsChildren])
+      }
+      return createVnode(type, propsChildren) // 是属性 h('div',{style:{"color"：“red”}})
+    }
+    // 是数组  h('div',[h('span'),h('span')])
+    // 文本也走这里 h('div','hello')
+    else {
+      return createVnode(type, null, propsChildren)
+    }
+  } else {
+    if (l > 3) {
+      children = Array.from(arguments).slice(2)
+    } else if (l === 3 && isVnode(children)) {
+      // h('div,{},h('span'))
+      children = [children]
+    }
+    return createVnode(type, propsChildren, children)
+  }
+}
+
+```
+
+现在就可以通过h函数来创建虚拟节点了，
 
 ### vue3元素的初始化渲染
 
+```js
+import { ShapeFlags } from '@vue/shared'
 
+export function createRenderer(renderOptions) {
+  let {
+    insert: hostInsert,
+    remove: hostRemove,
+    setElementText: hostSetElementText,
+    setText: hostSetText,
+    parentNode: hostParentNode,
+    nextSibling: hostNextSibling,
+    createElement: hostCreateElement,
+    createText: hostCreateText,
+    patchProp: hostPatchProp
+  } = renderOptions
+
+  /**
+   * 挂载子节点
+   * @param children
+   * @param container
+   */
+  const mountChildren = (children, container) => {
+    for (let i = 0; i < children.length; i++) {
+      patch(null, children[i], container)
+    }
+  }
+  /**
+   * 把虚拟节点递归转换成真实dom
+   * @param vnode 虚拟节点
+   * @param container 容器
+   */
+  const mountElement = (vnode, container) => {
+    let { type, props, children, shapeFlag } = vnode
+    // 根据 type 创建元素，并且把真实dom挂载到这个虚拟节点上
+    let el = (vnode.el = hostCreateElement(type))
+
+    // 如果有 props 就循环添加  props 包括 style class event attrs
+    if (props) {
+      for (let key in props) {
+        hostPatchProp(el, key, null, props[key])
+      }
+    }
+    // 如果是文本
+    if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
+      hostSetElementText(el, children)
+    }
+    // 如果是数组
+    else if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+      mountChildren(children, el)
+    }
+    // 把真实节点插入到容器中
+    hostInsert(el, container)
+  }
+
+  /**
+   *
+   * @param n1 老的虚拟节点
+   * @param n2 新的虚拟节点
+   * @param container 容器
+   */
+  const patch = (n1, n2, container) => {
+    // 老节点和新节点一样，这个时候不需要更新
+    if (n1 === n2) {
+      return
+    }
+    // 初次渲染，不需要更新
+    if (n1 === null) {
+      // 后序还有组建的初次渲染，目前是元素的初始化渲染
+      mountElement(n2, container)
+    } else {
+      // 更新流程
+    }
+  }
+
+  /**
+   *
+   * @param vnode 虚拟节点
+   * @param container 容器
+   */
+  const render = (vnode, container) => {
+    if (vnode == null) {
+      // 卸载的逻辑
+    } else {
+      // 第一次的时候 vnode 是 null
+      // 第二次的时候就会从 容器上去取 vnode 进行走更新的逻辑
+      patch(container._vnode || null, vnode, container)
+    }
+    // 在容器上保存一份 vnode
+    container._vnode = vnode
+  }
+  return {
+    render
+  }
+}
+
+```
+
+createRenderer 函数接受到 runtime-dom里面的 DOM 操作函数，在内部返回出 render 函数。
+
+render函数提供给用户，并且接受 vnode 和 container。
+
+然后在 render 函数内部实现元素的渲染。
+
+现在我们编写以下代码，就可以实现用`render`函数渲染出DOM节点到`app`元素内部了。
+
+```js
+<div id="app"></div>
+<script src="./runtime-dom.global.js"></script> 
+let { createRenderer, h, render } = VueRuntimeDOM
+ render(
+     h('h1', { style: { color: 'red' } }, [h('span', null, 'hello'), h('span', null, 'world')]),
+     app
+ )
+```
+
+![image-20220412233425480](https://picture-stores.oss-cn-beijing.aliyuncs.com/img/image-20220412233425480.png)
 
 ### 解决遗留问题
 
