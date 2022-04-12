@@ -1360,8 +1360,6 @@ vue 中为了解耦，将逻辑分成了两个模块
 + 运行时 核心，不依赖于平台的（browser test 小程序 app canvas）靠的是虚拟DOM实现的
 + 针对于不同平台的运行时 vue 就是针对浏览器的运行时
 
-渲染器的作用： 大概就是可以提供 虚拟DOM 渲染在不同的平台上的一个入口。
-
 ```js
 <div id="app"></div>
 <script src="../../../node_modules/vue/dist/vue.global.js"></script>
@@ -1391,7 +1389,9 @@ renderer.render(h('h1', 'hello'), app)
 
 ### runtime-dom 
 
+封装了一些平台对应的代码，再调用创建渲染器的代码，具体渲染是 core 做的。
 
+DOM API 渲染过程是用传入的 `renderOptions`来做的。
 
 ### runtime-core
 
