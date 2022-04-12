@@ -436,7 +436,7 @@ export function effect(fn) {
 
 ![image-20220406222119838](https://picture-stores.oss-cn-beijing.aliyuncs.com/img/image-20220406222119838.png)
 
-加入我们现在要编写以下代码，那么功能该如何实现呢？
+假如我们现在要编写以下代码，那么功能该如何实现呢？
 
 ```js
 - 需要在 1s之后更改 age 的值，并且重新执行 effect 函数中的副作用函数？该怎么实现呢？
@@ -580,7 +580,7 @@ export function trigger(target, type, key, value, oldValue) {
 
    ![image-20220408080631599](https://picture-stores.oss-cn-beijing.aliyuncs.com/img/image-20220408080631599.png)
 
-   加入我们给一个 key 编写两个 effect
+   假如我们给一个 key 编写两个 effect
 
    ```js
    effect(() => {
@@ -655,6 +655,8 @@ setTimeout(() => {
     }, 1000)
 }, 1000)
 ```
+
+
 
 ![image-20220408223014030](https://picture-stores.oss-cn-beijing.aliyuncs.com/img/image-20220408223014030.png)
 
@@ -811,7 +813,7 @@ state.age = 30
 state.age = 40
 ```
 
-、可以看到，这里 scheduler 函数执行了 4 次，但是 effect 函数并没有执行。需要我们手动的在调度器函数里面调用。
+可以看到，这里 scheduler 函数执行了 4 次，但是 effect 函数并没有执行。需要我们手动的在调度器函数里面调用。
 
 ![image-20220409203326008](https://picture-stores.oss-cn-beijing.aliyuncs.com/img/image-20220409203326395.png)
 
@@ -1385,7 +1387,7 @@ let renderer = createRenderer({
 renderer.render(h('h1', 'hello'), app)
 ```
 
-![image-20220411204640376](C:\Users\z\AppData\Roaming\Typora\typora-user-images\image-20220411204640376.png)
+![image-20220412112525794](https://picture-stores.oss-cn-beijing.aliyuncs.com/img/image-20220412112525794.png)
 
 ### runtime-dom 
 
@@ -1600,9 +1602,140 @@ export function patchStyle(el, prevValue, nextValue) {
 
 ### runtime-core
 
+新建runtiem-core模块
+
++index.ts
+
+```js
+export { createRenderer } from './renderer'
+
+export { h } from './h'
+
+export * from './vnode'
+
+```
+
+
+
++renderer.ts
+
+```js
+export function createRenderer(renderOptions) {
+  const render = (vnode, container) => {}
+  return {
+    render
+  }
+}
+
+```
+
+
+
++h.ts
+
+```js
+export function h() {}
+
+```
+
+
+
++vnode.ts
+
+```js
+export function vnode() {}
+
+```
+
+现在我们使用自己编写的runtime-dom包编写以下代码，尝试用我们的去替换官方的
+
+```js
+<div id="app"></div>
+<!-- <script src="../../../node_modules/vue/dist/vue.global.js"></script> -->
+<script src="./runtime-dom.global.js"></script>
+<script>
+    // 渲染器渲染的是虚拟 DOM，在内部，使用用户传递的方法，把虚拟DOM转换成真正要渲染的节点。在不同的平台上运行
+
+    let { createRenderer, h, render } = VueRuntimeDOM
+	console.log(createRenderer, h, render)
+
+	render(h('h1', 'hello'), app)
+</script>
+```
+
+![image-20220412092603659](https://picture-stores.oss-cn-beijing.aliyuncs.com/img/image-20220412092603659.png)
+
+可以看见他们都能够打印出来了，下面我们就开始去实现里面具体的函数主体。
+
 
 
 ### h方法和createNode的实现
+
+shapeFlag 
+
+位运算 向左乘2，向右除2
+
+```js
+export const enum ShapeFlags { // vue3提供的形状标识
+  ELEMENT = 1, // 元素
+  FUNCTIONAL_COMPONENT = 1 << 1, // 函数组件
+  STATEFUL_COMPONENT = 1 << 2,
+  TEXT_CHILDREN = 1 << 3, // children 是文本
+  ARRAY_CHILDREN = 1 << 4, // children 是数组
+  SLOTS_CHILDREN = 1 << 5,
+  TELEPORT = 1 << 6,
+  SUSPENSE = 1 << 7,
+  COMPONENT_SHOULD_KEEP_ALIVE = 1 << 8,
+  COMPONENT_KEPT_ALIVE = 1 << 9,
+  COMPONENT = ShapeFlags.STATEFUL_COMPONENT | ShapeFlags.FUNCTIONAL_COMPONENT
+}
+```
+
+假如我们要判断一个元素是不是组件，我们就可以用他来 & 上组件
+
+```js
+010    
+110
+这个按位与的结果就是
+010
+```
+
+然后就可以通过这个返回的结果判断是否符合条件
+
+```js
+import { isArray, isString, ShapeFlags } from '@vue/shared'
+
+export function createVnode(type, props, children) {
+  let shapeFlag = isString(type) ? ShapeFlags.ELEMENT : 0
+
+  const vnode = {
+    type,
+    props,
+    children,
+    key: props?.key,
+    __v_isVnode: true,
+    shapeFlag
+  }
+
+  if (children) {
+    let type = 0
+    if (isArray(children)) {
+      type = ShapeFlags.ARRAY_CHILDREN // 标识
+    } else {
+      children = String(children)
+      type = ShapeFlags.TEXT_CHILDREN
+    }
+    vnode.shapeFlag |= type // 计算得出这个元素的类型
+  }
+
+  return vnode
+}
+
+```
+
+
+
+
 
 
 
