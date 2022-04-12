@@ -1393,6 +1393,211 @@ renderer.render(h('h1', 'hello'), app)
 
 DOM API 渲染过程是用传入的 `renderOptions`来做的。
 
+新建 runtime-dom 模块
+
++index.ts
+
+```js
+import { createRenderer } from '@vue/runtime-core'
+import { nodeOps } from './nodeOps'
+import { patchProp } from './patchProp'
+
+// 渲染器渲染的参数
+const renderOptions = Object.assign(nodeOps, { patchProp })
+
+export function render(vnode, container) {
+  // 在创建渲染器的时候  传入选项
+  createRenderer(renderOptions).render(vnode, container)
+}
+
+export * from '@vue/runtime-core'
+
+```
+
+
+
++nodeOps.ts   DOM 操作API
+
+```js
+// 实现 dom 节点 的 增加 删除 修改 查询
+export const nodeOps = {
+  insert(child, parent, anchor = null) {
+    parent.insertBefore(child, anchor) // 如果没有参考的元素，就相当于 appendChild
+  },
+  remove(child) {
+    let parentNode = child.parentNode
+    if (parentNode) {
+      parentNode.removeChild(child)
+    }
+  },
+  setElementText(el, text) {
+    el.textContent = text
+  },
+  setText(node, text) {
+    node.nodeValue = text
+  },
+  querySelector(selector) {
+    document.querySelector(selector)
+  },
+  parentNode(node) {
+    return node.parentNode
+  },
+  nextSibling(node) {
+    return node.nextSibling
+  },
+  createElement(tagName) {
+    return document.createElement(tagName)
+  },
+  createText(text) {
+    return document.createTextNode(text)
+  }
+}
+
+```
+
+
+
++patchProp 属性操作API
+
+```js
+// 这个函数的作用就是修改 DOM 节点上的属性的值
+// 属性可以分为  class、style、attr、event
+
+import { patchAttr } from './modules/attr'
+import { patchClass } from './modules/class'
+import { patchEvent } from './modules/event'
+import { patchStyle } from './modules/style'
+
+/**
+ *
+ * @param el 一个 DOM 元素
+ * @param key
+ * @param prevValue  老值
+ * @param nextValue  新值
+ */
+export function patchProp(el, key, prevValue, nextValue) {
+  if (key === 'class') {
+    patchClass(el, nextValue)
+  } else if (key === 'style') {
+    patchStyle(el, prevValue, nextValue)
+  } else if (/^on[^a-z]/.test(key)) {
+    // 这里的 key 是事件名称
+    patchEvent(el, key, nextValue)
+  } else {
+    // 这里的 key 是属性名称
+    patchAttr(el, key, nextValue)
+  }
+}
+
+```
+
+
+
++./modules/attr.ts
+
+```js
+/**
+ *
+ * @param el DOM 元素
+ * @param key 属性的key   属性格式 id=100
+ * @param nextValue 新值
+ */
+export function patchAttr(el, key, nextValue) {
+  if (nextValue) {
+    el.setAttribute(key, nextValue)
+  } else {
+    el.removeAttribute(key)
+  }
+}
+
+```
+
+
+
++./modules/class.ts
+
+```tsx
+export function patchClass(el, nextValue) {
+  if (nextValue == null) {
+    // 不需要 class 则直接移除
+    el.removeAttribute('class')
+  } else {
+    el.className = nextValue
+  }
+}
+
+```
+
+
+
++./modules/event.ts
+
+```js
+function createInvoker(callback) {
+  // 在当前的事件函数上面添加一个属性，用来缓存事件函数，这样如果事件函数发生变化了，就不用频繁的调用 addEventListener函数
+  // 进行绑定，只需要修改 事件函数的.value 属性即可。
+  const invoker = (e) => invoker.value(e)
+  invoker.value = callback
+  return invoker
+}
+
+// el._vei 的数据结构
+// {
+//   click: invoker1    invoker1.value,
+//   change: invoke2    invoke2.value
+// }
+// 在这里做了一个缓存，将事件绑定都缓存在 当前的DOM上面
+export function patchEvent(el, eventName, nextValue) {
+  let invokers = el._vei || (el._vei = {})
+  let exits = invokers[eventName]
+  // 如果已经绑定过了，并且有新的事件，则修改原来的 .value 即可
+  if (exits && nextValue) {
+    exits.value = nextValue
+  } else {
+    let event = eventName.slice(2).toLowerCase()
+    // 如果有新的事件
+    if (nextValue) {
+      const invoker = (invokers[eventName] = createInvoker(nextValue))
+      el.addEventListener(event, invoker)
+    } else if (exits) {
+      // 绑定过 但是没有新值，则需要移除事件
+      el.removeEventListener(event, exits)
+      invokers[eventName] = null // 清空相应的事件缓存
+    }
+  }
+}
+
+```
+
+
+
++./modules/style.ts
+
+```js
+export function patchStyle(el, prevValue, nextValue) {
+  // 先直接用新的覆盖老的
+  for (let key in nextValue) {
+    el.style[key] = nextValue[key]
+  }
+
+  // 如果老的里面有， 新的里面没有，则需要删除
+  // {color: 'blue', width: '20px'}   老的
+  // {color: 'red', height: '100px'}   新的
+  // 这里先把新的全部给DOM节点赋值，然后循环老的，如果发现老的属性已经不在新的里面了，则需要将当前属性删除掉
+
+  for (let key in prevValue) {
+    if (nextValue[key] == null || nextValue[key] == undefined) {
+      el.style[key] = null
+    }
+  }
+}
+
+```
+
+现在我们的 render 函数需要有一个渲染器函数来接收 渲染器参数`renderOptiosn` 同时还需要给我们提供一个`render`函数，需要把`vnode`挂载到真实容器上的功能。这部分功能就是在`runtime-core`里面实现了。
+
+
+
 ### runtime-core
 
 
