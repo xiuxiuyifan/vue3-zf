@@ -1,6 +1,6 @@
 import { isString, ShapeFlags } from '@vue/shared'
 
-import { Text, createVnode } from './'
+import { Text, createVnode, isSameVnode } from './vnode'
 
 export function createRenderer(renderOptions) {
   let {
@@ -61,11 +61,27 @@ export function createRenderer(renderOptions) {
     // 把真实节点插入到容器中
     hostInsert(el, container)
   }
-
+  const unmount = (vnode) => {
+    hostRemove(vnode.el)
+  }
   const processText = (n1, n2, container) => {
     if (n1 === null) {
       // 创建出n2对应的真实dom，并且把真实dom挂载到这个虚拟节点上，并且把真实dom插入到容器中
       hostInsert((n2.el = hostCreateText(n2.children)), container)
+    }
+  }
+
+  const processElement = (n1, n2, container) => {
+    if (n1 === null) {
+      mountElement(n2, container)
+    } else if (n2 === null) {
+      // 卸载逻辑
+    } else {
+      // 更新逻辑
+      // 更新的情况分析
+      // 1.如果前后完全没有关系 div -> p ，那么久删除老的 添加新的节点
+      // 2.老的和新的一样，如果属性不一样，就比对属性，然后更新属性
+      // 3.如果属性都一样，就比较儿子
     }
   }
   /**
@@ -79,28 +95,26 @@ export function createRenderer(renderOptions) {
     if (n1 === n2) {
       return
     }
+    // 判断两个元素是否相同，如果不相同再添加，不相同的时候把老的节点删除掉
+    if (n1 && isSameVnode(n1, n2)) {
+      unmount(n1)
+      n1 = null
+    }
     const { type, shapeFlag } = n2
     // 初次渲染，不需要更新
-    if (n1 === null) {
-      switch (type) {
-        case Text:
-          processText(n1, n2, container)
-          break
-        default:
-          // 当前节点是元素
-          if (shapeFlag & ShapeFlags.ELEMENT) {
-            // 后序还有组建的初次渲染，目前是元素的初始化渲染
-            mountElement(n2, container)
-          }
-      }
-    } else {
-      // 更新流程
+    switch (type) {
+      case Text:
+        processText(n1, n2, container)
+        break
+      default:
+        // 当前节点是元素
+        if (shapeFlag & ShapeFlags.ELEMENT) {
+          // 后序还有组建的初次渲染，目前是元素的初始化渲染
+          processElement(n1, n2, container)
+        }
     }
   }
 
-  const unmount = (vnode) => {
-    hostRemove(vnode.el)
-  }
   /**
    *
    * @param vnode 虚拟节点
