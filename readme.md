@@ -2042,6 +2042,29 @@ setTimeout(() => {
 }, 1000)
 ```
 
+2. 文本的更新
+
+```js
+render(h(Text, 'hello'), app)
+
+setTimeout(() => {
+    render(h(Text, 'world'), app)
+}, 1000)
+
+// 代码实现
+const processText = (n1, n2, container) => {
+    ...
+    // 都是文本
+    else {
+        // 虽然文本的内容发生变化了，但是我们可以复用老的节点
+        const el = (n2.el = n1.el)
+        if (n1.children !== n2.children) {
+            hostSetText(el, n2.children)
+        }
+    }
+}
+```
+
 
 
 ### 简单的儿子比较

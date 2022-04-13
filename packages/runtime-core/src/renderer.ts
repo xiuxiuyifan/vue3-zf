@@ -69,6 +69,14 @@ export function createRenderer(renderOptions) {
       // 创建出n2对应的真实dom，并且把真实dom挂载到这个虚拟节点上，并且把真实dom插入到容器中
       hostInsert((n2.el = hostCreateText(n2.children)), container)
     }
+    // 都是文本
+    else {
+      // 虽然文本的内容发生变化了，但是我们可以复用老的节点
+      const el = (n2.el = n1.el)
+      if (n1.children !== n2.children) {
+        hostSetText(el, n2.children)
+      }
+    }
   }
 
   const processElement = (n1, n2, container) => {
