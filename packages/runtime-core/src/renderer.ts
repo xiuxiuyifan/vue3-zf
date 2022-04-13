@@ -84,7 +84,6 @@ export function createRenderer(renderOptions) {
     if (n1 === null) {
       switch (type) {
         case Text:
-          debugger
           processText(n1, n2, container)
           break
         default:
@@ -99,6 +98,9 @@ export function createRenderer(renderOptions) {
     }
   }
 
+  const unmount = (vnode) => {
+    hostRemove(vnode.el)
+  }
   /**
    *
    * @param vnode 虚拟节点
@@ -107,6 +109,10 @@ export function createRenderer(renderOptions) {
   const render = (vnode, container) => {
     if (vnode == null) {
       // 卸载的逻辑
+      // 判断一下容器中是否有虚拟节点
+      if (container._vnode) {
+        unmount(container._vnode)
+      }
     } else {
       // 第一次的时候 vnode 是 null
       // 第二次的时候就会从 容器上去取 vnode 进行走更新的逻辑
@@ -119,3 +125,7 @@ export function createRenderer(renderOptions) {
     render
   }
 }
+
+// 注意事项：
+// 文本的处理需要自己添加类型，不能通过document.createElement来创建
+// 如果传入的vnode 是 null的话，则是卸载逻辑，需要删除DOM节点

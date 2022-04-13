@@ -1989,6 +1989,34 @@ const normalize = (children, i) => {
 
 
 
+卸载 DOM节点
+
+```js
+render(h('h1', null, [h('span', null, 'hello'), '66666']), app)
+
+render(null, app)
+```
+
+假设我们要实现卸载某个DOM上的元素，那么我们只需要给render函数传递一个null的虚拟节点，然后通过DOM去找到它自身上面对应的`vdom`再调用移除的方法就可以了。
+
+```js
+const render = () => {
+    if (vnode == null) {
+      // 卸载的逻辑
+      // 判断一下容器中是否有虚拟节点
+      if (container._vnode) {
++        unmount(container._vnode)
+      }
+    }
+}
+
+const unmount = (vnode) => {
+    hostRemove(vnode.el)
+}
+```
+
+
+
 ## Vue3 Diff 算法
 
 
