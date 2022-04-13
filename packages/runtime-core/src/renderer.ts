@@ -79,17 +79,43 @@ export function createRenderer(renderOptions) {
     }
   }
 
+  const patchProps = (oldProps, newProps, el) => {
+    // 新的里面有直接用新的覆盖掉即可
+    for (let key in newProps) {
+      hostPatchProp(el, key, oldProps[key], newProps[key])
+    }
+    // {
+    //   style: {color: 'red'}
+    // }
+    // {
+    // }
+    // 如果老的里面有新的里面没有，则是删除
+    for (let key in oldProps) {
+      if (newProps[key] == null) {
+        hostPatchProp(el, key, oldProps[key], null)
+      }
+    }
+  }
+
+  const patchChildren = (n1, n2, el) => {}
+
+  // 先复用节点、再比较属性、再比较儿子。
+  const patchElement = (n1, n2) => {
+    // 复用节点
+    let el = (n2.el = n1.el)
+    let oldProps = n1.props || {}
+    let newProps = n2.props || {}
+    // 对比属性
+    patchProps(oldProps, newProps, el)
+    // 对比儿子
+    patchChildren(n1, n2, el)
+  }
   const processElement = (n1, n2, container) => {
     if (n1 === null) {
       mountElement(n2, container)
-    } else if (n2 === null) {
-      // 卸载逻辑
     } else {
       // 更新逻辑
-      // 更新的情况分析
-      // 1.如果前后完全没有关系 div -> p ，那么久删除老的 添加新的节点
-      // 2.老的和新的一样，如果属性不一样，就比对属性，然后更新属性
-      // 3.如果属性都一样，就比较儿子
+      patchElement(n1, n2)
     }
   }
   /**
@@ -152,3 +178,8 @@ export function createRenderer(renderOptions) {
 // 注意事项：
 // 文本的处理需要自己添加类型，不能通过document.createElement来创建
 // 如果传入的vnode 是 null的话，则是卸载逻辑，需要删除DOM节点
+
+// 更新的情况分析：
+// 1.如果前后完全没有关系 div -> p ，那么久删除老的 添加新的节点
+// 2.老的和新的一样，如果属性不一样，就比对属性，然后更新属性
+// 3.如果属性都一样，就比较儿子

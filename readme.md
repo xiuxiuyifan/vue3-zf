@@ -2065,7 +2065,63 @@ const processText = (n1, n2, container) => {
 }
 ```
 
+3. 元素的更新
 
+```js
+render(h('h1', { style: { color: 'red' } }, '111'), app)
+
+setTimeout(() => {
+    render(h('h1', { style: { color: 'blue', background: 'red' } }, '666'), app)
+}, 1000)
+
+
+// 实现
+
+const processElement = (n1, n2, container) => {
+    if (n1 === null) {
+        ...
+    } else {
+        // 更新逻辑
++        patchElement(n1, n2)
+    }
+}
+    
+// 先复用节点、再比较属性、再比较儿子。
+const patchElement = (n1, n2) => {
+    // 复用节点
+    let el = (n2.el = n1.el)
+    let oldProps = n1.props || {}
+    let newProps = n2.props || {}
+    // 对比属性
+    patchProps(oldProps, newProps, el)
+    // 对比儿子
+    patchChildren(n1, n2, el)
+}
+
+const patchProps = (oldProps, newProps, el) => {
+    // 新的里面有直接用新的覆盖掉即可
+    for (let key in newProps) {
+        hostPatchProp(el, key, oldProps[key], newProps[key])
+    }
+    // {
+    //   style: {color: 'red'}
+    // }
+    // {
+    // }
+    // 如果老的里面有新的里面没有，则是删除
+    for (let key in oldProps) {
+      if (newProps[key] == null) {
+        hostPatchProp(el, key, oldProps[key], null)
+      }
+    }
+}
+
+const patchChildren = (n1, n2, el) => {}
+```
+
+![image-20220413212652048](https://picture-stores.oss-cn-beijing.aliyuncs.com/img/image-20220413212652048.png)
+
+![image-20220413212943858](https://picture-stores.oss-cn-beijing.aliyuncs.com/img/image-20220413212943858.png)
 
 ### 简单的儿子比较
 
