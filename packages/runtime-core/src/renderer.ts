@@ -95,8 +95,9 @@ export function createRenderer(renderOptions) {
     if (n1 === n2) {
       return
     }
-    // 判断两个元素是否相同，如果不相同再添加，不相同的时候把老的节点删除掉
-    if (n1 && isSameVnode(n1, n2)) {
+    // 判断两个元素是否相同，如果不相同，先把老的节点卸载，
+    // 然后再执行后面的逻辑
+    if (n1 && !isSameVnode(n1, n2)) {
       unmount(n1)
       n1 = null
     }

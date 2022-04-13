@@ -2023,6 +2023,25 @@ const unmount = (vnode) => {
 
 ### 比较元素
 
+1. 两个元素不相同，先把老的节点卸载。
+
+```js
+// 判断两个元素是否相同，如果不相同，先把老的节点卸载，
+// 然后再执行后面的逻辑
+if (n1 && !isSameVnode(n1, n2)) {
+    unmount(n1)
+    n1 = null
+}
+
+// 用例
+
+render(h('h1', null, [h('span', null, 'hello'), '66666']), app)
+
+setTimeout(() => {
+    render(h(Text, 'world'), app)
+}, 1000)
+```
+
 
 
 ### 简单的儿子比较
