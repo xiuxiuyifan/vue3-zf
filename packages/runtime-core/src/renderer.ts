@@ -97,7 +97,55 @@ export function createRenderer(renderOptions) {
     }
   }
 
-  const patchChildren = (n1, n2, el) => {}
+  //卸载儿子
+  const unmountChildren = (children) => {
+    for (let i = 0; i < children.length; i++) {
+      unmount(children[i])
+    }
+  }
+
+  const patchChildren = (n1, n2, el) => {
+    const c1 = n1.children
+    const c2 = n2.children
+    const prevShapeFlag = n1.shapeFlag
+    const { shapeFlag } = n2
+
+    // 新节点是文本
+    if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
+      // 如果旧节点是数组
+      if (prevShapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+        // 卸载老的儿子节点
+        unmountChildren(c1)
+      }
+      // 文本 文本
+      // 文本 空
+      // 上面的情况也会走这个逻辑
+      if (c1 !== c2) {
+        hostSetElementText(el, c2)
+      }
+    } else {
+      // 如果老的是数组
+      if (prevShapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+        // 新节点和老节点都是数组
+        if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+        }
+        // 之前是数组，现在不是数组，就把之前的删掉
+        // 现在不是数组 （文本和空 删除以前的）
+        else {
+          unmountChildren(c1)
+        }
+      } else {
+        // 老的是文本，新的也是文本
+        if (prevShapeFlag & ShapeFlags.TEXT_CHILDREN) {
+          hostSetElementText(el, '')
+        }
+        // 老的是文本新的是数组
+        if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+          mountChildren(c2, el)
+        }
+      }
+    }
+  }
 
   // 先复用节点、再比较属性、再比较儿子。
   const patchElement = (n1, n2) => {
