@@ -1,6 +1,7 @@
 import { isString, ShapeFlags } from '@vue/shared'
+import { getSequence } from './sequence'
 
-import { Text, createVnode, isSameVnode } from './vnode'
+import { Text, createVnode, isSameVnode, Fragment } from './vnode'
 
 export function createRenderer(renderOptions) {
   let {
@@ -62,6 +63,10 @@ export function createRenderer(renderOptions) {
     hostInsert(el, container, anchor)
   }
   const unmount = (vnode) => {
+    let { type } = vnode
+    if (type === Fragment) {
+      return unmountChildren(vnode.children)
+    }
     hostRemove(vnode.el)
   }
   /**
@@ -282,6 +287,14 @@ export function createRenderer(renderOptions) {
       patchElement(n1, n2)
     }
   }
+
+  const processFragment = (n1, n2, container) => {
+    if (n1 == null) {
+      mountChildren(n2.children, container)
+    } else {
+      patchChildren(n1, n2, container)
+    }
+  }
   /**
    * 核心方法
    * @param n1 老的虚拟节点
@@ -304,6 +317,9 @@ export function createRenderer(renderOptions) {
     switch (type) {
       case Text:
         processText(n1, n2, container)
+        break
+      case Fragment:
+        processFragment(n1, n2, container)
         break
       default:
         // 当前节点是元素
