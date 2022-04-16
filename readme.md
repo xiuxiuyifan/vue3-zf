@@ -858,6 +858,7 @@ let runner = effect(
         scheduler() {
             // 在 state 变化的时候，可以在 调度器里面控制  effect 副作用是否执行
             console.log('run')
+            //  开启一个异步任务，等同步代码执行完成之后,异步任务里面的代码才会执行。
             if (!waiting) {
                 waiting = true
                 setTimeout(() => {
@@ -2247,6 +2248,149 @@ e2  1
 
 
 ### 组件的渲染和更新原理
+
+在`h`方法中传入一个对象，说明要渲染一个组件。
+
+```js
+export const createVNode = (type,props,children = null)=>{
+    const shapeFlag = isString(type)  
+        ? ShapeFlags.ELEMENT: isObject(type)  // 判断type是一个对象的时候
+        ? ShapeFlags.STATEFUL_COMPONENT:0;
+    // ... 稍后可以根据类型来进行组件的挂载
+}
+```
+
+下面我们就要在`patch`函数里面根据不同的`type`类型去进行处理（进行挂载或更新）
+
+```js
+const patch = (n1,n2,container,anchor?) => {
+    // 初始化和diff算法都在这里喲
+    if(n1 == n2){return }
+    if(n1 && !isSameVNodeType(n1,n2)){ // 有n1 是n1和n2不是同一个节点
+        unmount(n1)
+        n1 = null
+    }
+    const {type,shapeFlag} = n2;
+    switch(type){
+        // ...
+        default:
+            if(shapeFlag & ShapeFlags.ELEMENT){
+                //...
+            }else if(shapeFlag & ShapeFlags.COMPONENT){
+                processComponent(n1,n2,container,anchor)
+            }
+    }
+}
+```
+
+现在我们进入`processComponent()`函数中，在这个函数里面主要就是区分是更新组件还是初次挂载。现在我们先写组件的挂载逻辑。
+
+```js
+const processComponent = (n1,n2,container,anchor)=>{
+    if(n1 == null){
+        mountComponent(n2,container,anchor);
+    }else{
+        // 组件更新逻辑
+    }
+}
+
+// 组件挂载函数
+const mountComponent = (n2,container,anchor)=>{
+    const {render,data=()=>({})} = n2.type;
+   	// 我们把 data 函数返回的值
+    const state = reactive(data())
+    const instance = {
+        state, // 组件的状态
+        isMounted:false, // 组件是否挂载
+        subTree:null, // 子树
+        update:null,
+        vnode:n2
+    }
+    const componentUpdateFn = ()=>{
+        if(!instance.isMounted){
+            const subTree = render.call(state,state);
+            patch(null,subTree,container,anchor);
+            instance.subTree = subTree
+            instance.isMounted = true;
+        }else{
+            // 数据变化了之后，会重新生成 subTree 虚拟DOM ，再重新走patch方法。
+            const subTree = render.call(state,state);
+            patch(instance.subTree,subTree,container,anchor)
+            instance.subTree = subTree
+        }
+    }
+    // 创建一个 effect ，将render()函数作为副作用函数，
+    const effect = new ReactiveEffect(componentUpdateFn)
+    const update = instance.update = effect.run.bind(effect);
+    update();
+}
+
+```
+
+根据以上代码，我们编写以下的测试代码
+
+```js
+let { createRenderer, h, render, Text, Fragment } = VueRuntimeDOM
+
+const VueComponent = {
+    data() {
+        return {
+            name: '小明',
+            age: 10
+        }
+    },
+    render() {
+        setTimeout(() => {
+            console.log('render')
+            this.age++
+            this.name = '小红'
+        }, 1000)
+        return h('p', {}, `我叫${this.name}，今年${this.age}岁`)
+    }
+}
+
+render(h(VueComponent), app)
+```
+
+我们发现，当数据被修改两次以后，render函数也会执行两次，这显然不是我们想要的，下面我们就需要做异步更新来优化现在的状态。
+
+![image-20220416195417714](https://picture-stores.oss-cn-beijing.aliyuncs.com/img/image-20220416195417714.png)
+
+怎么实现呢？我们用之前的`scheduler`来实现，配合`Promise.resolve()`
+
+现在我们来修改调度方法，将更新方法压入到队列中去。
+
+```js
+const effect = new ReactiveEffect(
+    componentUpdateFn,
+    ()=>queueJob(instance.update) 
+);
+const update = instance.update = effect.run.bind(effect);
+```
+
+下面利用微任务，来批量执行压入栈中的任务
+
+```js
+const queue = [];
+let isFlushing = false;
+const resolvedPromise = Promise.resolve()
+export function queueJob(job){
+    if(!queue.includes(job)){
+        queue.push(job);
+    }
+    if(!isFlushing){
+        isFlushing = true;
+        resolvedPromise.then(()=>{
+            isFlushing = false;
+            for(let i = 0; i < queue.length;i++){
+                let job = queue[i];
+                job();
+            }
+            queue.length = 0;
+        })
+    }
+}
+```
 
 
 

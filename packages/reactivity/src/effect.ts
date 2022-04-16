@@ -16,7 +16,7 @@ export class ReactiveEffect {
   deps = []
   //
   parent = null
-  constructor(public fn, public scheduler) {}
+  constructor(public fn, public scheduler?) {}
   run() {
     // 没有激活则不用收集依赖，只要执行函数就行了
     if (!this.active) {

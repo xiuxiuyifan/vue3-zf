@@ -1,7 +1,10 @@
+import { reactive } from '@vue/reactivity'
 import { isString, ShapeFlags } from '@vue/shared'
+import { ReactiveEffect } from '@vue/reactivity'
 import { getSequence } from './sequence'
 
 import { Text, createVnode, isSameVnode, Fragment } from './vnode'
+import { queueJob } from './scheduler'
 
 export function createRenderer(renderOptions) {
   let {
@@ -295,6 +298,45 @@ export function createRenderer(renderOptions) {
       patchChildren(n1, n2, container)
     }
   }
+
+  const mountComponent = (n2, container, anchor) => {
+    const { render, data = () => ({}) } = n2.type
+    // 我们把 data 函数返回的值
+    const state = reactive(data())
+    const instance = {
+      state, // 组件的状态
+      isMounted: false, // 组件是否挂载
+      subTree: null, // 子树
+      update: null,
+      vnode: n2
+    }
+    const componentUpdateFn = () => {
+      if (!instance.isMounted) {
+        const subTree = render.call(state, state)
+        patch(null, subTree, container, anchor)
+        instance.subTree = subTree
+        instance.isMounted = true
+      } else {
+        // 数据变化了之后，会重新生成 subTree 虚拟DOM ，再重新走patch方法。
+        const subTree = render.call(state, state)
+        patch(instance.subTree, subTree, container, anchor)
+        instance.subTree = subTree
+      }
+    }
+    // 创建一个 effect ，将render()函数作为副作用函数，
+    // 把任务更新推入到异步任务中去
+    const effect = new ReactiveEffect(componentUpdateFn, () => queueJob(instance.update))
+    const update = (instance.update = effect.run.bind(effect))
+    update()
+  }
+  const processComponent = (n1, n2, container, anchor) => {
+    // 组件挂载
+    if (n1 == null) {
+      mountComponent(n2, container, anchor)
+    } else {
+      // 组件更新
+    }
+  }
   /**
    * 核心方法
    * @param n1 老的虚拟节点
@@ -326,6 +368,8 @@ export function createRenderer(renderOptions) {
         if (shapeFlag & ShapeFlags.ELEMENT) {
           // 后序还有组建的初次渲染，目前是元素的初始化渲染
           processElement(n1, n2, container, anchor)
+        } else if (shapeFlag & ShapeFlags.COMPONENT) {
+          processComponent(n1, n2, container, anchor)
         }
     }
   }
