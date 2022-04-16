@@ -1626,7 +1626,6 @@ export function createRenderer(renderOptions) {
     render
   }
 }
-
 ```
 
 
@@ -1635,7 +1634,6 @@ export function createRenderer(renderOptions) {
 
 ```js
 export function h() {}
-
 ```
 
 
@@ -1644,7 +1642,6 @@ export function h() {}
 
 ```js
 export function vnode() {}
-
 ```
 
 现在我们使用自己编写的runtime-dom包编写以下代码，尝试用我们的去替换官方的
@@ -2189,7 +2186,41 @@ const patchChildren = (n1, n2, el) => {
 }
 ```
 
+新老节点都是数组的情况
 
+```js
+render(
+    h('h1', { style: { color: 'red' } }, [
+        h('li', {}, 'a'),
+        h('li', {}, 'b'),
+        h('li', {}, 'c')
+    ]),
+    app
+)
+
+setTimeout(() => {
+    render(
+        h('h1', { style: { color: 'red' } }, [
+            h('li', {}, 'a'),
+            h('li', {}, 'b'),
+            h('li', {}, 'c')
+        ]),
+        app
+    )
+}, 1000)
+```
+
+
+
+
+
+```
+i   0
+e1  -1 
+e2  1
+```
+
+![image-20220414215928324](https://picture-stores.oss-cn-beijing.aliyuncs.com/img/image-20220414215928324.png)
 
 ### diff算法的优化
 

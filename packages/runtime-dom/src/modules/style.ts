@@ -1,4 +1,4 @@
-export function patchStyle(el, prevValue, nextValue) {
+export function patchStyle(el, prevValue, nextValue = {}) {
   // 先直接用新的覆盖老的
   for (let key in nextValue) {
     el.style[key] = nextValue[key]
