@@ -188,21 +188,28 @@ export function createRenderer(renderOptions) {
       }
     } // 到这这是新老属性和儿子的比对，没有移动位置
 
+    // 获取最长递增子序列
+    let increment = getSequence(newIndexToOldIndexMap)
+
     // 需要移动位置
+    let j = increment.length - 1
     for (let i = toBePatched - 1; i >= 0; i--) {
+      // 3 2 1 0
       let index = i + s2
       let current = c2[index] // 找到h
       let anchor = index + 1 < c2.length ? c2[index + 1].el : null
       if (newIndexToOldIndexMap[i] === 0) {
-        // 创建   5 3 4 0
+        // 创建   [5 3 4 0]  -> [1,2]
         patch(null, current, el, anchor)
       } else {
         // 不是0 说明是已经比对过属性和儿子的了
-        hostInsert(current.el, el, anchor) // 目前无论如何都做了一遍倒叙插入，其实可以不用的， 可以根据刚才的数组来减少插入次数
+        if (i != increment[j]) {
+          hostInsert(current.el, el, anchor) // 目前无论如何都做了一遍倒叙插入，其实可以不用的， 可以根据刚才的数组来减少插入次数
+        } else {
+          j--
+        }
       }
-
       // 这里发现缺失逻辑 我需要看一下current有没有el。如果没有el说明是新增的逻辑
-
       // 最长递增子序列来实现  vue2 在移动元素的时候会有浪费  优化
     }
   }
