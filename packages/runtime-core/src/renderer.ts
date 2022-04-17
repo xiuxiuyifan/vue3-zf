@@ -1,5 +1,5 @@
 import { reactive } from '@vue/reactivity'
-import { isString, ShapeFlags } from '@vue/shared'
+import { isNumber, isString, ShapeFlags } from '@vue/shared'
 import { ReactiveEffect } from '@vue/reactivity'
 import { getSequence } from './sequence'
 
@@ -23,7 +23,7 @@ export function createRenderer(renderOptions) {
 
   const normalize = (children, i) => {
     // 检测如果是字符串的话，就把字符串转换成文本节点
-    if (isString(children[i])) {
+    if (isString(children[i]) || isNumber(children[i])) {
       let vnode = createVnode(Text, null, children[i])
       children[i] = vnode
     }
@@ -327,7 +327,6 @@ export function createRenderer(renderOptions) {
         let { next, bu, u } = instance
         if (next) {
           // 更新前 我也需要拿到最新的属性来进行更新
-          debugger
           updateComponentPreRender(instance, next)
         }
         // 组件内部更新
@@ -393,6 +392,7 @@ export function createRenderer(renderOptions) {
       unmount(n1)
       n1 = null
     }
+
     const { type, shapeFlag } = n2
     // 初次渲染，不需要更新
     switch (type) {

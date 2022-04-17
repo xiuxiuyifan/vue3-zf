@@ -2520,6 +2520,80 @@ export function updateProps(prevProps, nextProps) {
 
 ### setup实现原理
 
+组件的 render 函数每次更新时都会重新执行，但是setup函数只会在组件挂载时执行一次。
+
++ setup函数是compositionAPI的入口
++ 可以在内部编写逻辑，解决data与方法分离，导致页面反复横跳的问题
++ setup返回函数的时候就相当于组件的render函数，返回对象的时候就将对象中的数据暴露给模板里面使用。
++ setup的参数是`props`、`context({slot,emit,attrs,expose})`
+
+下面我们就来实现这两种setup函数的用法
+
+```js
+// 第一种 返回对象
+let App = {
+    setup() {
+        let count = ref(10)
+        return {
+            count
+        }
+    },
+    render() {
+        return h('p', {}, this.count)   // 这里不需要 .value
+    }
+}
+
+render(h(App), app)
+
+// 第二种 返回函数
+let App = {
+    setup() {
+        let count = ref(10)
+        return () => {
+            return h('p', {}, count.value)   // 这里需要使用.value ，因为在内部使用了proxyRefs进行了代理
+        }
+    }
+}
+render(h(App), app)
+```
+
+代码实现，
+
+```js
+setupComponent(instance) {
+    //...
+    let setup = type.setup
+    if (setup) {
+        const setupResult = setup(instance.props)
+        if (isFunction(setupResult)) {
+            instance.render = setupResult
+        } else if (isObject(setupResult)) {
+            // 对内部的ref 进行取消.value
+            instance.setupState = proxyRefs(setupResult)
+        }
+    }
+    if (!instance.render) {
+        instance.render = type.render
+    }
+}
+
+
+// 然后初始化 
+
+const setupRenderEffect() {
+   
+    const { render } = instance
+    const componentUpdateFn = () => {
+        // 初始化
+        if (!instance.isMounted) {
+            // 传入的 instance.proxy 是一个代理对象
+            // 会根据一定的顺序返回 instance 实例上面的 key 
+            const subTree = render.call(instance.proxy, instance.proxy)
+            patch(null, subTree, container, anchor)
+        }
+}
+```
+
 
 
 ### 事件和插槽的实现原理

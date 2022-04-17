@@ -1,5 +1,5 @@
-import { reactive } from '@vue/reactivity'
-import { hasOwn, isFunction } from '@vue/shared'
+import { reactive, proxyRefs } from '@vue/reactivity'
+import { hasOwn, isFunction, isObject } from '@vue/shared'
 import { initProps } from './componentProps'
 
 export function createComponentInstance(vnode) {
@@ -15,7 +15,7 @@ export function createComponentInstance(vnode) {
     attrs: {},
     proxy: null,
     render: null,
-    setupState: {},
+    setupState: {}, // 这里就是 setup函数返回的对象
     slots: {} // 这里就是插槽相关内容
   }
   return instance
@@ -66,6 +66,16 @@ export function setupComponent(instance) {
   if (data) {
     if (!isFunction(data)) return console.warn('data option must be a function')
     instance.data = reactive(data.call(instance.proxy))
+  }
+  let setup = type.setup
+  if (setup) {
+    const setupResult = setup(instance.props)
+    if (isFunction(setupResult)) {
+      instance.render = setupResult
+    } else if (isObject(setupResult)) {
+      // 对内部的ref 进行取消.value
+      instance.setupState = proxyRefs(setupResult)
+    }
   }
   if (!instance.render) {
     instance.render = type.render
