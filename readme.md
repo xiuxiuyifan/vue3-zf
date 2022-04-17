@@ -2449,6 +2449,73 @@ render(
 
 ### 更新操作的统一入口
 
+renderer.ts
+
+```js
+const updateComponentPreRender = (instance, next) => {
+    instance.next = null // next清空
+    instance.vnode = next // 实例上最新的虚拟节点
+    updateProps(instance.props, next.props)
+}
+
+const setupRenderEffect = (instance, container, anchor) => {
+    const { render } = instance
+    const componentUpdateFn = () => {
+        // 初始化
+        if (!instance.isMounted) {
+            //.....
+        } else {
+            let { next, bu, u } = instance
+            if (next) {
+        
+                updateComponentPreRender(instance, next)
+            }
+            
+        }
+    }
+}
+
+const shouldUpdateComponent = (n1, n2) => {
+    const { props: prevProps, children: prevChildren } = n1
+    const { props: nextProps, children: nextChildren } = n2
+    if (prevProps === nextProps) return false
+    if (prevChildren || nextChildren) {
+        return true
+    }
+    return hasPropsChanged(prevProps, nextProps)
+}
+
+const updateComponent = (n1, n2) => {
+    // instance.props 是响应式的，而且可以更改  属性的更新会导致页面重新渲染
+    const instance = (n2.component = n1.component) // 对于元素而言，复用的是dom节点，对于组件来说复用的是实例
+
+    // 需要更新就强制调用组件的update方法
+    if (shouldUpdateComponent(n1, n2)) {
+        instance.next = n2 // 将新的虚拟节点放到next属性上
+        instance.update() // 统一调用update方法来更新
+    }
+
+    // updateProps(instance,prevProps,nextProps); // 属性更新
+}
+```
+
+componentProps.ts
+
+```js
+export function updateProps(prevProps, nextProps) {
+  // 看一下属性有没有变化
+  // 值的变化 ，属性的个数是否发生变化
+  for (const key in nextProps) {
+    prevProps[key] = nextProps[key]
+  }
+  for (const key in prevProps) {
+    if (!hasOwn(nextProps, key)) {
+      delete prevProps[key]
+    }
+  }
+}
+```
+
 
 
 ### setup实现原理

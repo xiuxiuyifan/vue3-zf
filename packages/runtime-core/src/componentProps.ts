@@ -35,3 +35,16 @@ export const hasPropsChanged = (prevProps = {}, nextProps = {}) => {
   } // 比对属性对应的值是否一致  {a:{xxx:xxx}} {a:{qqq:qq}}
   return false
 }
+
+export function updateProps(prevProps, nextProps) {
+  // 看一下属性有没有变化
+  // 值的变化 ，属性的个数是否发生变化
+  for (const key in nextProps) {
+    prevProps[key] = nextProps[key]
+  }
+  for (const key in prevProps) {
+    if (!hasOwn(nextProps, key)) {
+      delete prevProps[key]
+    }
+  }
+}

@@ -6,7 +6,7 @@ import { getSequence } from './sequence'
 import { Text, createVnode, isSameVnode, Fragment } from './vnode'
 import { queueJob } from './scheduler'
 import { createComponentInstance, setupComponent } from './component'
-import { hasPropsChanged } from './componentProps'
+import { hasPropsChanged, updateProps } from './componentProps'
 
 export function createRenderer(renderOptions) {
   let {
@@ -309,16 +309,28 @@ export function createRenderer(renderOptions) {
 
     setupRenderEffect(instance, container, anchor)
   }
-
+  const updateComponentPreRender = (instance, next) => {
+    instance.next = null // next清空
+    instance.vnode = next // 实例上最新的虚拟节点
+    updateProps(instance.props, next.props)
+  }
   const setupRenderEffect = (instance, container, anchor) => {
     const { render } = instance
     const componentUpdateFn = () => {
+      // 初始化
       if (!instance.isMounted) {
         const subTree = render.call(instance.proxy, instance.proxy)
         patch(null, subTree, container, anchor)
         instance.subTree = subTree
         instance.isMounted = true
       } else {
+        let { next, bu, u } = instance
+        if (next) {
+          // 更新前 我也需要拿到最新的属性来进行更新
+          debugger
+          updateComponentPreRender(instance, next)
+        }
+        // 组件内部更新
         // 数据变化了之后，会重新生成 subTree 虚拟DOM ，再重新走patch方法。
         const subTree = render.call(instance.proxy, instance.proxy)
         patch(instance.subTree, subTree, container, anchor)
@@ -333,25 +345,27 @@ export function createRenderer(renderOptions) {
     update()
   }
 
-  const updateComponent = (n1, n2) => {
-    // 缓存组件
-    const instance = (n2.component = n1.component)
-    const { props: prevProps } = n1
-    const { props: nextProps } = n2
-    // 如果发现 props改变了，就循环改变 instance上面响应式的props
-    if (hasPropsChanged(prevProps, nextProps)) {
-      // 比较前后属性是否一致
-      for (const key in nextProps) {
-        // 改变 instance 上面的响应式的 props，从而让页面进行更新。
-        instance.props[key] = nextProps[key] // 响应式属性更新后会重新渲染
-      }
-      for (const key in instance.props) {
-        // 循环props
-        if (!(key in nextProps)) {
-          delete instance.props[key]
-        }
-      }
+  const shouldUpdateComponent = (n1, n2) => {
+    const { props: prevProps, children: prevChildren } = n1
+    const { props: nextProps, children: nextChildren } = n2
+    if (prevProps === nextProps) return false
+    if (prevChildren || nextChildren) {
+      return true
     }
+    return hasPropsChanged(prevProps, nextProps)
+  }
+
+  const updateComponent = (n1, n2) => {
+    // instance.props 是响应式的，而且可以更改  属性的更新会导致页面重新渲染
+    const instance = (n2.component = n1.component) // 对于元素而言，复用的是dom节点，对于组件来说复用的是实例
+
+    // 需要更新就强制调用组件的update方法
+    if (shouldUpdateComponent(n1, n2)) {
+      instance.next = n2 // 将新的虚拟节点放到next属性上
+      instance.update() // 统一调用update方法来更新
+    }
+
+    // updateProps(instance,prevProps,nextProps); // 属性更新
   }
   const processComponent = (n1, n2, container, anchor) => {
     // 组件挂载
