@@ -2396,9 +2396,44 @@ export function queueJob(job){
 
 ### 组件的props实现
 
+```js
+let { render, h } = VueRuntimeDOM
+
+let App = {
+    data() {
+        return {
+            age: 13
+        }
+    },
+    props: {
+        address: String
+    },
+    render() {
+        return h('div', {}, [
+            h('p', {}, this.age),  // state
+            h('p', {}, this.address), // props
+            h('p', {}, this.$attrs.a), // attrs
+            h('p', {}, this.$attrs.b)  // attrs
+        ])
+    }
+}
+render(
+    h(App, {
+        age: 10,
+        a: 1,
+        b: 2
+    }),
+    document.getElementById('app')
+)
+```
+
 
 
 ### 代码整理
+
+1. 要创造一个组件的实例
+2. 给实例赋值、props attrs 等
+3. 创建一个effect
 
 
 

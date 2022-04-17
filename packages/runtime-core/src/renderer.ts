@@ -5,6 +5,7 @@ import { getSequence } from './sequence'
 
 import { Text, createVnode, isSameVnode, Fragment } from './vnode'
 import { queueJob } from './scheduler'
+import { createComponentInstance, setupComponent } from './component'
 
 export function createRenderer(renderOptions) {
   let {
@@ -299,33 +300,36 @@ export function createRenderer(renderOptions) {
     }
   }
 
-  const mountComponent = (n2, container, anchor) => {
-    const { render, data = () => ({}) } = n2.type
-    // 我们把 data 函数返回的值
-    const state = reactive(data())
-    const instance = {
-      state, // 组件的状态
-      isMounted: false, // 组件是否挂载
-      subTree: null, // 子树
-      update: null,
-      vnode: n2
-    }
+  const mountComponent = (vnode, container, anchor) => {
+    // 1.创造一个组件实例
+    let instance = (vnode.component = createComponentInstance(vnode))
+
+    // 2.给实例上赋值
+    setupComponent(instance)
+    //3. 创建一个 effect
+
+    setupRenderEffect(instance, container, anchor)
+  }
+
+  const setupRenderEffect = (instance, container, anchor) => {
+    const { render } = instance
     const componentUpdateFn = () => {
       if (!instance.isMounted) {
-        const subTree = render.call(state, state)
+        const subTree = render.call(instance.proxy, instance.proxy)
         patch(null, subTree, container, anchor)
         instance.subTree = subTree
         instance.isMounted = true
       } else {
         // 数据变化了之后，会重新生成 subTree 虚拟DOM ，再重新走patch方法。
-        const subTree = render.call(state, state)
+        const subTree = render.call(instance.proxy, instance.proxy)
         patch(instance.subTree, subTree, container, anchor)
         instance.subTree = subTree
       }
     }
     // 创建一个 effect ，将render()函数作为副作用函数，
-    // 把任务更新推入到异步任务中去
+    // 把任务更新推入到异步任务中去,实现组件的异步更新
     const effect = new ReactiveEffect(componentUpdateFn, () => queueJob(instance.update))
+    // 我们将组件强制更新的逻辑保存到了组件的实例上，后续可以使用
     const update = (instance.update = effect.run.bind(effect))
     update()
   }

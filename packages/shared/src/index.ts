@@ -6,6 +6,9 @@ export const isArray = Array.isArray
 
 export const isString = (value) => typeof value === 'string'
 
+const hasOwnProperty = Object.prototype.hasOwnProperty
+export const hasOwn = (value, key) => hasOwnProperty.call(value, key)
+
 export const enum ShapeFlags { // vue3提供的形状标识
   ELEMENT = 1, // 元素
   FUNCTIONAL_COMPONENT = 1 << 1, // 函数组件
