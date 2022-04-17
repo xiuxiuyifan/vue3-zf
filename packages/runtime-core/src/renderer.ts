@@ -6,6 +6,7 @@ import { getSequence } from './sequence'
 import { Text, createVnode, isSameVnode, Fragment } from './vnode'
 import { queueJob } from './scheduler'
 import { createComponentInstance, setupComponent } from './component'
+import { hasPropsChanged } from './componentProps'
 
 export function createRenderer(renderOptions) {
   let {
@@ -135,7 +136,6 @@ export function createRenderer(renderOptions) {
       }
       i++
     }
-    console.log(i, e1, e2)
     while (i <= e1 && i <= e2) {
       const n1 = c1[e1]
       const n2 = c2[e2]
@@ -147,7 +147,6 @@ export function createRenderer(renderOptions) {
       e1--
       e2--
     }
-    console.log(i, e1, e2)
     // 有一方比较完了，要么就新增，要么就删除
     if (i > e1) {
       if (i <= e2) {
@@ -333,12 +332,34 @@ export function createRenderer(renderOptions) {
     const update = (instance.update = effect.run.bind(effect))
     update()
   }
+
+  const updateComponent = (n1, n2) => {
+    // 缓存组件
+    const instance = (n2.component = n1.component)
+    const { props: prevProps } = n1
+    const { props: nextProps } = n2
+    // 如果发现 props改变了，就循环改变 instance上面响应式的props
+    if (hasPropsChanged(prevProps, nextProps)) {
+      // 比较前后属性是否一致
+      for (const key in nextProps) {
+        // 改变 instance 上面的响应式的 props，从而让页面进行更新。
+        instance.props[key] = nextProps[key] // 响应式属性更新后会重新渲染
+      }
+      for (const key in instance.props) {
+        // 循环props
+        if (!(key in nextProps)) {
+          delete instance.props[key]
+        }
+      }
+    }
+  }
   const processComponent = (n1, n2, container, anchor) => {
     // 组件挂载
     if (n1 == null) {
       mountComponent(n2, container, anchor)
     } else {
       // 组件更新
+      updateComponent(n1, n2)
     }
   }
   /**

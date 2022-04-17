@@ -21,3 +21,17 @@ export function initProps(instance, rawProps) {
   instance.props = reactive(props)
   instance.attrs = attrs
 }
+
+export const hasPropsChanged = (prevProps = {}, nextProps = {}) => {
+  const nextKeys = Object.keys(nextProps)
+  if (nextKeys.length !== Object.keys(prevProps).length) {
+    return true
+  } // 比对属性前后 个数是否一致
+  for (let i = 0; i < nextKeys.length; i++) {
+    const key = nextKeys[i]
+    if (nextProps[key] !== prevProps[key]) {
+      return true
+    }
+  } // 比对属性对应的值是否一致  {a:{xxx:xxx}} {a:{qqq:qq}}
+  return false
+}

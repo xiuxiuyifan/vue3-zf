@@ -8,8 +8,6 @@ export function queueJob(job) {
     queue.push(job)
   }
   if (!isFlushing) {
-    console.log('queueJob')
-
     isFlushing = true
     resolvePromise.then(() => {
       isFlushing = false
