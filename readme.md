@@ -2604,6 +2604,39 @@ const setupRenderEffect() {
 事件
 
 ```js
+let App = {
+    // 可以从 setup 函数的第二个参数里面结构出 emit 方法
+    setup(props, { emit }) {
+        return () => {
+            return h(
+                'h1',
+                {
+                    onClick: () => {
+                        // emit 方法可以 发射一个事件和携带一些数据
+                        emit('ok', { data: 100 })
+                    }
+                },
+                'hi'
+            )
+        }
+    }
+}
+
+render(
+    h(App, {
+        // 在组件使用的地方，可以传入监听函数 onXxxx: (data) => {}，
+        // 当内部触发事件，会调用外部传入的函数，并且把携带的数据一并传入。
+        onOk: (data) => {
+            console.log(data)
+        }
+    }),
+    app
+)
+```
+
+
+
+```js
 setupComponent() {
     if(setup) {
         const setupContext = {
@@ -2624,6 +2657,57 @@ setupComponent() {
 组件初始化的时候，不仅仅要初始化组件，还要初始化插槽，
 
 ```js
+// 组件的插槽是一个对象 放着映射关系，渲染组件的时候去映射表中查找
+let Component = {
+    render() {
+        return h('div', [
+            h('div', this.$slots.header()),
+            h('div', this.$slots.main()),
+            h('div', this.$slots.footer())
+        ])
+    }
+}
+
+// 只有组件采用 slot
+
+// 当 h 函数的 children 属性是一个对象的时候，代表的是这个组件渲染的插槽，不再是儿子
+
+let App = {
+    render() {
+        // 渲染一个组件，并传入 slot
+        // 之前渲染组件的时候只用写组件本身和 组件的 props ，现在如果有了 slot ，就需要把 h 的第三个参数也支持对象的形式
+        return h(Component, null, {
+            header: () => h('div', 'header'),
+            main: () => h('div', 'main'),
+            footer: () => h('div', 'footer')
+        })
+    }
+}
+render(h(App, null), app)
+```
+
+插槽实现
+
+```js
+// 把children 保存在 实例的 slot上
+function initSlots(instance, children) {
+  if (instance.vnode.shapeFlag & ShapeFlags.SLOTS_CHILDREN) {
+    instance.slots = children // 保留children
+  }
+}
+
+const publicPropertyMap = {
+  $attrs: (i) => i.attrs,
+  $slots: (i) => i.slots
+}
+
+createVnode {
+    if(children){
+        else if (isObject(children)) {
+            type = ShapeFlags.SLOTS_CHILDREN // 如果children 是对象则说明是带有插槽的
+        }
+    }
+}
 ```
 
 

@@ -1,5 +1,5 @@
 import { reactive, proxyRefs } from '@vue/reactivity'
-import { hasOwn, isFunction, isObject } from '@vue/shared'
+import { hasOwn, isFunction, isObject, ShapeFlags } from '@vue/shared'
 import { initProps } from './componentProps'
 
 export function createComponentInstance(vnode) {
@@ -58,9 +58,16 @@ const publicInstanceProxy = {
     return true
   }
 }
+
+function initSlots(instance, children) {
+  if (instance.vnode.shapeFlag & ShapeFlags.SLOTS_CHILDREN) {
+    instance.slots = children // 保留children
+  }
+}
 export function setupComponent(instance) {
   let { props, type, children } = instance.vnode
   initProps(instance, props)
+  initSlots(instance, children) // 初始化插槽
   instance.proxy = new Proxy(instance, publicInstanceProxy)
   let data = type.data
   if (data) {
@@ -75,7 +82,8 @@ export function setupComponent(instance) {
         // 找到虚拟节点的属性有存放props
         const handler = instance.vnode.props[eventName]
         handler && handler(...args)
-      }
+      },
+      slots: instance.slots
     }
     const setupResult = setup(instance.props, setupContext)
     if (isFunction(setupResult)) {
