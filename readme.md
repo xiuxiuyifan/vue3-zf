@@ -2598,6 +2598,36 @@ const setupRenderEffect() {
 
 ### 事件和插槽的实现原理
 
++ 组件的插槽是一个对象，存放这映射关系，渲染组建的时候会去映射表中查找。
++ 组件的事件是采用类似于发布订阅者模式，在props中记录着子组件要执行的方法。当调用emit的时候就从props中去取出函数并调用。
+
+事件
+
+```js
+setupComponent() {
+    if(setup) {
+        const setupContext = {
+            emit: (event, ...args) => {
+                const eventName = `on${event[0].toUpperCase() + event.slice(1)}`
+                // 找到虚拟节点的属性有存放props
+                const handler = instance.vnode.props[eventName]
+                handler && handler(...args)
+            }
+        }
+    }
+    const setupResult = setup(instance.props, setupContext)
+}
+```
+
+插槽
+
+组件初始化的时候，不仅仅要初始化组件，还要初始化插槽，
+
+```js
+```
+
+
+
 
 
 ### 组件的声明周期实现原理
