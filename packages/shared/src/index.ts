@@ -8,6 +8,11 @@ export const isString = (value) => typeof value === 'string'
 
 export const isNumber = (value) => typeof value === 'number'
 
+export const invokeArrayFns = (fns) => {
+  for (let i = 0; i < fns.length; i++) {
+    fns[i]()
+  }
+}
 const hasOwnProperty = Object.prototype.hasOwnProperty
 export const hasOwn = (value, key) => hasOwnProperty.call(value, key)
 

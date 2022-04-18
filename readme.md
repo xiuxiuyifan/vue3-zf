@@ -2654,7 +2654,7 @@ setupComponent() {
 
 插槽
 
-组件初始化的时候，不仅仅要初始化组件，还要初始化插槽，
+组件初始化的时候，不仅仅要初始化组件，还要初始化插槽，从使用上来讲，就是组件内部调用children传递进来的不同函数在子组件内部生成不同的vnode。
 
 ```js
 // 组件的插槽是一个对象 放着映射关系，渲染组件的时候去映射表中查找
@@ -2712,9 +2712,123 @@ createVnode {
 
 
 
-
-
 ### 组件的声明周期实现原理
+
+```js
+let { h, render, ref, onBeforeMount, onMounted, onUpdated } = Vue
+
+const useCount = () => {
+    let count = ref(0)
+    const handleClick = () => {
+        count.value++
+    }
+    onBeforeMount(() => {
+        console.log('onBeforeMount')
+    })
+    onMounted(() => {
+        console.log('onMounted')
+    })
+    onUpdated(() => {
+        console.log('onUpdate')
+    })
+    return {
+        count,
+        handleClick
+    }
+}
+const App = {
+    setup() {
+        let { count, handleClick } = useCount()
+
+        return {
+            count,
+            handleClick
+        }
+    },
+    render() {
+        return h('div', {}, [
+            h('p', {}, this.count),
+            h('button', { onClick: this.handleClick }, 'click me')
+        ])
+    }
+}
+
+render(h(App, null), app)
+```
+
+实现，
+
+提问：
+
+1. 如何在hooks中获取到正在渲染的实例？
+2. 如何把当前实例与hook关联起来？
+
++apiLifeCycle.ts
+
+```js
+import { currentInstance, setCurrentInstance } from './component'
+
+export const enum LifecycleHooks {
+  BEFORE_MOUNT = 'bm',
+  MOUNTED = 'm',
+  BEFORE_UPDATE = 'bu',
+  UPDATED = 'u'
+}
+function createHook(type) {
+  return (hook, target = currentInstance) => {
+    // hook 需要绑定到对应的实例上。 我们之前写的依赖收集
+    if (target) {
+      // 关联此currentInstance和hook
+      // currentInstance['bm'] = [fn, fn]
+      const hooks = target[type] || (target[type] = [])
+      const wrappedHook = () => {
+        setCurrentInstance(target)
+        hook() // 将当前实例保存到currentInstance上
+        setCurrentInstance(null)
+      }
+      hooks.push(wrappedHook) // 稍后执行hook的时候 这个instance指代的是谁呢？
+    }
+  }
+}
+
+// 工厂模式
+export const onBeforeMount = createHook(LifecycleHooks.BEFORE_MOUNT)
+export const onMounted = createHook(LifecycleHooks.MOUNTED)
+export const onBeforeUpdate = createHook(LifecycleHooks.BEFORE_UPDATE)
+export const onUpdated = createHook(LifecycleHooks.UPDATED)
+
+```
+
+component.ts
+
+```js
+export let currentInstance = null
+export const setCurrentInstance = (instance) => (currentInstance = instance)
+export const getCurrentInstance = () => currentInstance
+
+
+export function setupComponent(instance) {
+  let setup = type.setup
+  if (setup) {
+    // .....
+    setCurrentInstance(instance)
+    const setupResult = setup(instance.props, setupContext)
+    setCurrentInstance(null)
+  }
+}
+```
+
+shared/index.ts
+
+```js
+export const invokeArrayFns = (fns) => {
+  for (let i = 0; i < fns.length; i++) {
+    fns[i]()
+  }
+}
+```
+
+
 
 
 
@@ -2724,6 +2838,10 @@ createVnode {
 
 ### vue优化靶向更新
 
+block 的作用是收集动态节点
+
+
+
 
 
 ### vue3中的编译优化
@@ -2731,6 +2849,16 @@ createVnode {
 
 
 ### vue3中的ast语法树转化
+
+
+
+
+
+## 源码调试
+
+### 嵌套组件渲染流程
+
+
 
 
 

@@ -1,5 +1,5 @@
 import { reactive } from '@vue/reactivity'
-import { isNumber, isString, ShapeFlags } from '@vue/shared'
+import { invokeArrayFns, isNumber, isString, ShapeFlags } from '@vue/shared'
 import { ReactiveEffect } from '@vue/reactivity'
 import { getSequence } from './sequence'
 
@@ -319,8 +319,15 @@ export function createRenderer(renderOptions) {
     const componentUpdateFn = () => {
       // 初始化
       if (!instance.isMounted) {
+        let { bm, m } = instance
+        if (bm) {
+          invokeArrayFns(bm)
+        }
         const subTree = render.call(instance.proxy, instance.proxy)
         patch(null, subTree, container, anchor)
+        if (m) {
+          invokeArrayFns(m)
+        }
         instance.subTree = subTree
         instance.isMounted = true
       } else {
@@ -331,9 +338,15 @@ export function createRenderer(renderOptions) {
         }
         // 组件内部更新
         // 数据变化了之后，会重新生成 subTree 虚拟DOM ，再重新走patch方法。
+        if (bu) {
+          invokeArrayFns(bu)
+        }
         const subTree = render.call(instance.proxy, instance.proxy)
         patch(instance.subTree, subTree, container, anchor)
         instance.subTree = subTree
+        if (u) {
+          invokeArrayFns(u)
+        }
       }
     }
     // 创建一个 effect ，将render()函数作为副作用函数，
